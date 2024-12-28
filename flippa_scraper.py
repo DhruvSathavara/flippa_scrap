@@ -5,7 +5,8 @@ from selectolax.parser import HTMLParser
 from httpx import AsyncHTTPTransport
 import os
 from dotenv import load_dotenv
-from utils import log_ip_address  
+from utils import log_ip_address
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -19,10 +20,11 @@ USER_AGENTS = [
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
     "Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1",
 ]
- 
+
+
 async def fetch_page(client, page_number, retries=3):
     """
-    Fetch a page of listings from the Flippa API with retry logic for 429 errors.
+    Fetch a page of listings from the Flippa API with retry logic for 429 errors and simulated errors.
     Args:
         client: The HTTPX AsyncClient instance.
         page_number: The page number to fetch.
@@ -55,20 +57,28 @@ async def fetch_page(client, page_number, retries=3):
 
             # Handle 429 Too Many Requests
             if response.status_code == 429:
-                retry_after = int(response.headers.get("Retry-After", 10))  # Default to 10 seconds
-                print(f"Rate limited. Waiting for {retry_after} seconds before retrying...")
+                retry_after = int(
+                    response.headers.get("Retry-After", 10)
+                )  # Default to 10 seconds
+                print(
+                    f"Rate limited. Waiting for {retry_after} seconds before retrying..."
+                )
                 await asyncio.sleep(retry_after)
                 continue  # Retry the request
 
             response.raise_for_status()  # Raise exception for other HTTP errors
             data = response.json()
+
+            # Simulate an error (for testing retries)
+            # raise Exception("Simulated error")
+
             return data.get("results", [])  # Return listings
 
-        except httpx.RequestError as e:
+        except Exception as e:
             print(f"Attempt {attempt}/{retries} failed for page {page_number}: {e}")
             if attempt == retries:
                 return []  # Return empty list on final failure
-            await asyncio.sleep(10)  # Wait before retrying
+            await asyncio.sleep(1)  # Wait before retrying
 
 
 async def scrape_flippa_links():
@@ -83,7 +93,6 @@ async def scrape_flippa_links():
     transport = AsyncHTTPTransport(proxy=PROXY_URL)
     async with httpx.AsyncClient(transport=transport) as client:
         while True:
-
             print(f"Fetching page {page_number}...")
             listings = await fetch_page(client, page_number)
             if not listings:  # Stop if no listings are found
@@ -91,7 +100,11 @@ async def scrape_flippa_links():
                 break
 
             # Extract only the detail page links
-            links = [listing.get("listing_url") for listing in listings if listing.get("listing_url")]
+            links = [
+                listing.get("listing_url")
+                for listing in listings
+                if listing.get("listing_url")
+            ]
             all_links.extend(links)
 
             print(f"Scraped {len(links)} links from page {page_number}.")
@@ -118,8 +131,9 @@ async def main():
         for link in links:
             file.write(f"{link}\n")
     print("\nLinks saved to flippa_links.txt")
- 
-    #  from here it is the detail page  
+
+    #  from here it is the detail page
+
 
 async def scrape_detail_page(url):
     """
@@ -183,12 +197,18 @@ async def scrape_detail_page(url):
                     details["asking_price"] = price_element.text(strip=True)
 
             # Get 'about business'
-            about_business_element = html.css_first("div[data-controller='toggle-class']")
+            about_business_element = html.css_first(
+                "div[data-controller='toggle-class']"
+            )
             if about_business_element:
-                additional_info["about_business"] = about_business_element.text(strip=True)
+                additional_info["about_business"] = about_business_element.text(
+                    strip=True
+                )
 
             # Get additional info (e.g., site age, profit margin, etc.)
-            additional_info_elements = html.css("#properties-summary .d-flex.Onboarding__properties-item")
+            additional_info_elements = html.css(
+                "#properties-summary .d-flex.Onboarding__properties-item"
+            )
             for info_element in additional_info_elements:
                 label_element = info_element.css_first(".pg-3")
                 value_element = info_element.css_first(".pg-1")
@@ -215,5 +235,5 @@ async def scrape_detail_page(url):
 
 
 if __name__ == "__main__":
-    # asyncio.run(main())
-    asyncio.run(scrape_detail_page("https://flippa.com/11634071"))
+    asyncio.run(main())
+    # asyncio.run(scrape_detail_page("https://flippa.com/11634071"))
