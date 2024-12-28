@@ -34,7 +34,7 @@ async def fetch_page(client, page_number, retries=3):
     """
     url = "https://flippa.com/search"
     params = {
-        "filter[property_type]": "website,fba,saas,ecommerce_store,plugin_and_extension,ai_apps_and_tools,youtube,ios_app,android_app,game,crypto_app,social_media,newsletter,service_and_agency,service,other",
+        "filter[property_type]": "website,fba,saas,ecommerce_store,plugin_and_extension,ai_apps_and_tools,youtube,ios_app,android_app,game,crypto_app,social_media,newsletter,service_and_agency,service,other,domain",
         "filter[revenue_generating]": "T,F",
         "filter[sale_method]": "auction,classified",
         "filter[status]": "open",
@@ -68,7 +68,7 @@ async def fetch_page(client, page_number, retries=3):
 
             response.raise_for_status()  # Raise exception for other HTTP errors
             data = response.json()
-
+            # print(data.get("metadata"))
             # Simulate an error (for testing retries)
             # raise Exception("Simulated error")
 
@@ -79,6 +79,7 @@ async def fetch_page(client, page_number, retries=3):
             if attempt == retries:
                 return []  # Return empty list on final failure
             await asyncio.sleep(1)  # Wait before retrying
+
 
 
 async def scrape_flippa_links():
