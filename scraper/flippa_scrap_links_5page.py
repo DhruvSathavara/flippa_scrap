@@ -5,7 +5,8 @@ from selectolax.parser import HTMLParser
 from httpx import AsyncHTTPTransport
 import os
 from dotenv import load_dotenv
-from utils import log_ip_address
+from utils.utils import log_ip_address
+
 
 # Load environment variables from .env file
 load_dotenv()
@@ -91,9 +92,10 @@ async def scrape_flippa_links():
     """
     all_links = []
     page_number = 1
+    max_pages = 1
     transport = AsyncHTTPTransport(proxy=PROXY_URL)
     async with httpx.AsyncClient(transport=transport) as client:
-        while True:
+        while page_number <= max_pages:
             print(f"Fetching page {page_number}...")
             listings = await fetch_page(client, page_number)
             if not listings:  # Stop if no listings are found
@@ -127,11 +129,15 @@ async def main():
     for idx, link in enumerate(links, start=1):
         print(f"{idx}. {link}")
 
+    output_dir = "scraped_links"
+    os.makedirs(output_dir, exist_ok=True)
+
     # Save to a file ( for testing)
-    with open("flippa_links.txt", "w") as file:
+    output_file = os.path.join(output_dir, "flippa_links.txt")
+    with open(output_file, "w") as file:
         for link in links:
             file.write(f"{link}\n")
-    print("\nLinks saved to flippa_links.txt")
+    print(f"\nLinks saved to {output_file}")
 
     #  from here it is the detail page
 
